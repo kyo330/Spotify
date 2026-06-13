@@ -1,0 +1,39 @@
+name: Daily Spotify Tracker
+
+on:
+  schedule:
+    # Runs once a day at 09:00 UTC. Adjust as needed.
+    - cron: '0 9 * * *'
+  workflow_dispatch: {}  # allows manual trigger from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run tracker
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+        run: python track_artists.py
+
+      - name: Commit updated CSVs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add artist_history.csv track_history.csv
+          git diff --staged --quiet || git commit -m "Daily Spotify data update $(date -u +%Y-%m-%d)"
+          git push
